@@ -5,6 +5,9 @@ lazy val root = Project("elastic4s", file("."))
   .settings(publish := {})
   .settings(publishArtifact := false)
   .settings(name := "elastic4s")
+  .settings(
+    scalacOptions ++= Seq("-Xmax-classfile-name", "100")
+  )
   .aggregate(
     core,
     tcp,
@@ -83,6 +86,7 @@ lazy val embedded = Project("elastic4s-embedded", file("elastic4s-embedded"))
 lazy val testkit = Project("elastic4s-testkit", file("elastic4s-testkit"))
   .settings(
     name := "elastic4s-testkit",
+    scalacOptions ++= Seq("-Xmax-classfile-name", "100"),
     libraryDependencies ++= Seq(
       "org.scalatest"                         %% "scalatest"                % ScalatestVersion
     )
