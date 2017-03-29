@@ -1,6 +1,7 @@
 package com.sksamuel.elastic4s
 
-import play.api.libs.json.{Json, Reads, Writes}
+import com.sksamuel.elastic4s.http.index.{CreateIndexResponse, DeleteIndexResponse, IndexExistsResponse, PutMappingResponse}
+import play.api.libs.json._
 
 import scala.annotation.implicitNotFound
 import scala.reflect.Manifest
@@ -27,4 +28,9 @@ package object playjson {
       case NonFatal(e) => Left(e)
     }
   }
+
+  implicit val indexExistResponseResponseFormat = Json.format[IndexExistsResponse]
+  implicit val createIndexResponseFormat = Json.format[CreateIndexResponse]
+  implicit val deleteIndexResponseFormat = Json.format[DeleteIndexResponse]
+  implicit val putMappingResponseFormat = Json.format[PutMappingResponse]
 }

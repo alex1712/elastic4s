@@ -40,7 +40,6 @@ object Build extends AutoPlugin {
     unmanagedClasspath in Compile ++= update.value.select(configurationFilter("compileonly")),
     scalaVersion := ScalaVersion,
     crossScalaVersions := Seq("2.11.8", "2.12.1"),
-    crossPaths := false,
     publishMavenStyle := true,
     resolvers += Resolver.mavenLocal,
     fork in Test := true,

@@ -144,7 +144,7 @@ lazy val playjson = Project("elastic4s-play-json", file("elastic4s-play-json"))
     .settings(
       name := "elastic4s-play-json",
       libraryDependencies += "com.typesafe.play" %% "play-json" % PlayJsonVersion
-    ).dependsOn(core, testkit % "test")
+    ).dependsOn(core, http, testkit % "test")
 
 lazy val docsMappingsAPIDir = settingKey[String]("Name of subdirectory in site target directory for api docs")
 
