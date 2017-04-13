@@ -9,7 +9,7 @@ object Build extends AutoPlugin {
   override def requires = JvmPlugin
 
   object autoImport {
-    val org = "com.sksamuel.elastic4s"
+    val org = "monoqi"
     val AkkaVersion = "2.4.17"
     val CatsVersion = "0.9.0"
     val CirceVersion = "0.7.1"
@@ -60,12 +60,17 @@ object Build extends AutoPlugin {
       "org.mockito"                           % "mockito-all"               % MockitoVersion        % "test",
       "org.scalatest"                         %% "scalatest"                % ScalatestVersion      % "test"
     ),
+    credentials += Credentials(Path.userHome / ".nexus" / ".credentials"),
     publishTo := {
-      val nexus = "https://oss.sonatype.org/"
-      if (version.value.trim.endsWith("SNAPSHOT"))
-        Some("snapshots" at nexus + "content/repositories/snapshots")
-      else
-        Some("releases" at nexus + "service/local/staging/deploy/maven2")
+      val nexus = "http://nexus.monoqi.com:8081/"
+      if (isSnapshot.value) {
+        if(sbtPlugin.value) Some("plugin-snapshots" at s"${nexus}repository/sbt-plugins-snapshots")
+        else Some("snapshots" at s"${nexus}repository/maven-snapshots")
+      }
+      else {
+        if(sbtPlugin.value) Some("plugin-releases" at s"${nexus}repository/sbt-plugins-releases")
+        else Some("releases"  at s"${nexus}repository/maven-releases")
+      }
     },
     pomExtra := {
       <url>https://github.com/sksamuel/elastic4s</url>

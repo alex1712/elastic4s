@@ -29,8 +29,8 @@ package object playjson {
     }
   }
 
-  implicit val indexExistResponseResponseFormat = Json.format[IndexExistsResponse]
-  implicit val createIndexResponseFormat = Json.format[CreateIndexResponse]
-  implicit val deleteIndexResponseFormat = Json.format[DeleteIndexResponse]
-  implicit val putMappingResponseFormat = Json.format[PutMappingResponse]
+  implicit val indexExistResponseResponseFormat = Json.reads[IndexExistsResponse]
+  implicit val createIndexResponseFormat = Json.reads[CreateIndexResponse]
+  implicit val deleteIndexResponseFormat = Json.reads[DeleteIndexResponse]
+  implicit val putMappingResponseFormat = Json.reads[PutMappingResponse]
 }
