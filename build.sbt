@@ -8,6 +8,11 @@ lazy val root = Project("elastic4s", file("."))
   .settings(
     scalacOptions ++= Seq("-Xmax-classfile-name", "100")
   )
+  .settings(mappings in(Compile, packageSrc) ++= {
+    val base = (sourceManaged in Compile).value
+    val files = (managedSources in Compile).value
+    files.map { f => (f, f.relativeTo(base).get.getPath) }
+  })
   .aggregate(
     core,
     tcp,
@@ -19,6 +24,7 @@ lazy val root = Project("elastic4s", file("."))
     jackson,
     json4s,
     playjson,
+    sprayjson,
     streams,
     xpacksecurity
   )
@@ -26,8 +32,8 @@ lazy val root = Project("elastic4s", file("."))
 lazy val core = Project("elastic4s-core", file("elastic4s-core"))
   .settings(name := "elastic4s-core")
   .settings(libraryDependencies ++= Seq(
-    "org.locationtech.spatial4j" % "spatial4j"     % "0.6",
-    "com.vividsolutions"         % "jts"           % "1.13",
+    "org.locationtech.spatial4j"    % "spatial4j"     % "0.6",
+    "com.vividsolutions"            % "jts"           % "1.13",
     "com.fasterxml.jackson.core"    % "jackson-core"            % JacksonVersion        % "test",
     "com.fasterxml.jackson.core"    % "jackson-databind"        % JacksonVersion        % "test",
     "com.fasterxml.jackson.module"  %% "jackson-module-scala"   % JacksonVersion        % "test" exclude("org.scala-lang", "scala-library")
@@ -145,6 +151,12 @@ lazy val playjson = Project("elastic4s-play-json", file("elastic4s-play-json"))
       name := "elastic4s-play-json",
       libraryDependencies += "com.typesafe.play" %% "play-json" % PlayJsonVersion
     ).dependsOn(core, http, testkit % "test")
+
+lazy val sprayjson = Project("elastic4s-spray-json", file("elastic4s-spray-json"))
+  .settings(
+    name := "elastic4s-spray-json",
+    libraryDependencies += "io.spray" %% "spray-json" % SprayJsonVersion
+  ).dependsOn(core, testkit % "test")
 
 lazy val docsMappingsAPIDir = settingKey[String]("Name of subdirectory in site target directory for api docs")
 
