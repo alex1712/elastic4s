@@ -1,24 +1,21 @@
 package com.sksamuel.elastic4s.http.search
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.sksamuel.elastic4s.get.HitField
 import com.sksamuel.elastic4s.http.{Shards, SourceAsContentBuilder}
 import com.sksamuel.elastic4s.{Hit, HitReader}
 
-case class SearchHit(private val _id: String,
-                     private val _index: String,
-                     private val _type: String,
-                     private val _score: Float,
+case class SearchHit(@JsonProperty("_id") id: String,
+                     @JsonProperty("_index") index: String,
+                     @JsonProperty("_type") `type`: String,
+                     @JsonProperty("_score") score: Float,
                      private val _source: Map[String, AnyRef],
                      fields: Map[String, AnyRef],
                      highlight: Map[String, Seq[String]],
-                     private val _version: Long) extends Hit {
+                     private val inner_hits: Map[String, Map[String, Any]],
+                     @JsonProperty("_version") version: Long) extends Hit {
 
   def highlightFragments(name: String): Seq[String] = Option(highlight).getOrElse(Map.empty).getOrElse(name, Nil)
-
-  override def index: String = _index
-  override def id: String = _id
-  override def `type`: String = _type
-  override def version: Long = _version
 
   def storedField(fieldName: String): HitField = storedFieldOpt(fieldName).get
   def storedFieldOpt(fieldName: String): Option[HitField] = fields.get(fieldName).map { v =>
@@ -37,17 +34,40 @@ case class SearchHit(private val _id: String,
   override def sourceAsString: String = SourceAsContentBuilder(_source).string()
 
   override def exists: Boolean = true
-  override def score: Float = _score
+
+  def innerHits: Map[String, InnerHits] = Option(inner_hits).getOrElse(Map.empty).mapValues { hits =>
+      val v = hits("hits").asInstanceOf[Map[String, AnyRef]]
+      InnerHits(
+        total = v("total").asInstanceOf[Int],
+        max_score = v("max_score").asInstanceOf[Double],
+        hits = v("hits").asInstanceOf[Seq[Map[String, AnyRef]]].map { hits =>
+          InnerHit(
+            nested = hits("_nested").asInstanceOf[Map[String, AnyRef]],
+            score = hits("_score").asInstanceOf[Double],
+            source = hits("_source").asInstanceOf[Map[String, AnyRef]],
+            highlight = hits.get("highlight").map(_.asInstanceOf[Map[String, Seq[String]]]).getOrElse(Map.empty)
+          )
+        }
+      )
+  }
 }
 
 case class SearchHits(total: Int,
-                      private val max_score: Double,
+                      @JsonProperty("max_score") maxScore: Double,
                       hits: Array[SearchHit]) {
-  def maxScore: Double = max_score
   def size: Int = hits.length
   def isEmpty: Boolean = hits.isEmpty
   def nonEmpty: Boolean = hits.nonEmpty
 }
+
+case class InnerHits(total: Int,
+                     max_score: Double,
+                     hits: Seq[InnerHit])
+
+case class InnerHit(nested: Map[String, AnyRef],
+                    score: Double,
+                    source: Map[String, AnyRef],
+                    highlight: Map[String, Seq[String]])
 
 case class SuggestionEntry(term: String) {
   def options: Seq[String] = Nil
@@ -79,11 +99,7 @@ case class TermSuggestionResult(text: String,
 }
 
 case class Bucket(key: String,
-                  private val doc_count: Int) {
-  def docCount: Int = doc_count
-  @deprecated("use getDocCount", "5.2.9")
-  def getDocCount: Int = docCount
-}
+                  @JsonProperty("doc_count") docCount: Int)
 
 trait AggregationResponse {
 
@@ -106,11 +122,11 @@ trait AggregationResponse {
 }
 
 case class SearchResponse(took: Int,
-                          private val timed_out: Boolean,
-                          private val terminated_early: Option[Boolean],
+                          @JsonProperty("timed_out") isTimedOut: Boolean,
+                          @JsonProperty("terminated_early") isTerminatedEarly: Boolean,
                           private val suggest: Map[String, Seq[SuggestionResult]],
-                          private val _shards: Shards,
-                          private val _scroll_id: String,
+                          @JsonProperty("_shards") shards: Shards,
+                          @JsonProperty("_scroll_id") scrollId: Option[String],
                           aggregations: Map[String, AnyRef],
                           hits: SearchHits) extends AggregationResponse {
 
@@ -120,15 +136,12 @@ case class SearchResponse(took: Int,
   def size: Int = hits.size
   def ids: Seq[String] = hits.hits.map(_.id)
   def maxScore: Double = hits.maxScore
-  def scrollId: Option[String] = Option(_scroll_id)
-
-  def shards: Shards = _shards
-
-  def isTimedOut: Boolean = timed_out
-  def isTerminatedEarly: Option[Boolean] = terminated_early
 
   def isEmpty: Boolean = hits.isEmpty
   def nonEmpty: Boolean = hits.nonEmpty
+
+  def aggregationsAsString: String = SourceAsContentBuilder(aggregations).string()
+  def aggregationsAsMap: Map[String, AnyRef] = aggregations
 
   private def suggestion(name: String): Map[String, SuggestionResult] = suggest(name).map { result => result.text -> result }.toMap
 

@@ -3,15 +3,18 @@ package com.sksamuel.elastic4s.testkit
 import java.util
 import java.util.Locale
 
+import com.sksamuel.exts.OptionImplicits._
 import com.sksamuel.elastic4s.bulk.RichBulkResponse
 import com.sksamuel.elastic4s.get.{RichGetResponse, RichMultiGetResponse}
 import com.sksamuel.elastic4s.http.Shards
-import com.sksamuel.elastic4s.http.bulk.{BulkResponse, BulkResponseItem, Index}
+import com.sksamuel.elastic4s.http.bulk.{BulkResponse, BulkResponseItem, BulkResponseItems}
 import com.sksamuel.elastic4s.http.cluster.ClusterHealthResponse
 import com.sksamuel.elastic4s.http.delete.{DeleteByQueryResponse, DeleteResponse}
 import com.sksamuel.elastic4s.http.explain.ExplainResponse
 import com.sksamuel.elastic4s.http.get.{GetResponse, MultiGetResponse}
 import com.sksamuel.elastic4s.http.index._
+import com.sksamuel.elastic4s.http.index.admin._
+import com.sksamuel.elastic4s.http.index.mappings.PutMappingResponse
 import com.sksamuel.elastic4s.http.search.{ClearScrollResponse, SearchHit, SearchHits}
 import com.sksamuel.elastic4s.http.update.UpdateResponse
 import com.sksamuel.elastic4s.http.validate.ValidateResponse
@@ -33,8 +36,8 @@ import org.elasticsearch.action.admin.indices.refresh.RefreshResponse
 import org.elasticsearch.action.admin.indices.validate.query.ValidateQueryResponse
 import org.elasticsearch.action.delete.{DeleteResponse => TcpDeleteResponse}
 import org.elasticsearch.action.explain.{ExplainResponse => TcpExplainResponse}
-import org.elasticsearch.action.search.{ClearScrollResponse => TcpClearScrollResponse}
 import org.elasticsearch.action.bulk.byscroll.{BulkByScrollResponse, BulkByScrollTask}
+
 import scala.collection.JavaConverters._
 
 trait ResponseConverter[T, R] {
@@ -79,15 +82,24 @@ object ResponseConverterImplicits {
       response.took.toMillis,
       response.hasFailures,
       response.items.map { x =>
-        BulkResponseItem(
-          Index(
+        BulkResponseItems(
+          BulkResponseItem(
+            x.itemId,
             x.index,
             x.`type`,
             x.id,
             x.version,
-            x.original.status().getStatus.toString, // TODO: The model might need to be changed to use Int instead
-            null // TODO: Will likely need to be obtained from original.getResponse
-          ))
+            false,
+            false,
+            true,
+            "Created",
+            x.original.status.getStatus,
+            None,
+            None
+          ).some,
+          None,
+          None
+        )
       }
     )
   }
@@ -96,10 +108,10 @@ object ResponseConverterImplicits {
     override def convert(response: RichSearchResponse) = SearchResponse(
       response.tookInMillis.toInt,
       response.isTimedOut,
-      response.isTerminatedEarly,
+      response.isTerminatedEarly.getOrElse(false),
       null, // TODO
       Shards(response.totalShards, response.shardFailures.length, response.successfulShards),
-      response.scrollId,
+      Option(response.scrollId),
       null, // TODO: Aggregations are still being working on
       SearchHits(
         response.totalHits.toInt,
@@ -113,6 +125,7 @@ object ResponseConverterImplicits {
             x.sourceAsMap.asScalaNested,
             x.fields.mapValues(_.value),
             x.highlightFields.mapValues(_.fragments.map(_.string)),
+            inner_hits = Map.empty,// TODO: Set properly
             x.version
           )
         }
@@ -171,7 +184,7 @@ object ResponseConverterImplicits {
   }
 
   implicit object DeleteByQueryResponseConverter extends ResponseConverter[BulkByScrollResponse, DeleteByQueryResponse] {
-    override def convert(response: BulkByScrollResponse) = {
+    override def convert(response: BulkByScrollResponse): DeleteByQueryResponse = {
       val field = classOf[BulkByScrollResponse].getDeclaredField("status")
       field.setAccessible(true)
       val status = field.get(response).asInstanceOf[BulkByScrollTask.Status]

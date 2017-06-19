@@ -48,7 +48,10 @@ trait QueryApi {
                      (implicit builder: BuildableTermsQuery[String]): TermsQueryDefinition[String] =
     termsQuery("_field_names", names)
 
+  @deprecated("Use bool query directly", "5.3.3")
   def filter(first: QueryDefinition, rest: QueryDefinition*): BoolQueryDefinition = filter(first +: rest)
+
+  @deprecated("Use bool query directly", "5.3.3")
   def filter(queries: Iterable[QueryDefinition]): BoolQueryDefinition = BoolQueryDefinition().filter(queries)
 
   def functionScoreQuery(): FunctionScoreQueryDefinition = FunctionScoreQueryDefinition()
@@ -141,7 +144,8 @@ trait QueryApi {
 
   def multiMatchQuery(text: String) = MultiMatchQueryDefinition(text)
 
-  def matchAllQuery() = new MatchAllQueryDefinition
+  def matchNoneQuery() = MatchNoneQueryDefinition()
+  def matchAllQuery() = MatchAllQueryDefinition()
 
   def moreLikeThisQuery(first: String, rest: String*): MoreLikeThisExpectsLikes = moreLikeThisQuery(first +: rest)
   def moreLikeThisQuery(fields: Iterable[String]): MoreLikeThisExpectsLikes = new MoreLikeThisExpectsLikes(fields.toSeq)
@@ -157,13 +161,13 @@ trait QueryApi {
       likeItems(first +: rest)
 
     def likeItems(items: Iterable[MoreLikeThisItem]): MoreLikeThisQueryDefinition =
-      likeDocs(items.map { item => DocumentRef(item.index, item.`type`, item.id) })
+      MoreLikeThisQueryDefinition(fields).copy(likeDocs = items.toSeq)
 
     def likeDocs(first: DocumentRef,
                  rest: DocumentRef*): MoreLikeThisQueryDefinition = likeDocs(first +: rest)
 
     def likeDocs(docs: Iterable[DocumentRef]): MoreLikeThisQueryDefinition =
-      MoreLikeThisQueryDefinition(fields).copy(likeDocs = docs.toSeq)
+      likeItems(docs.map { d => MoreLikeThisItem(d.index, d.`type`, d.id) })
 
     def artificialDocs(first: ArtificialDocument,
                        rest: ArtificialDocument*): MoreLikeThisQueryDefinition = artificialDocs(first +: rest)
@@ -265,6 +269,7 @@ trait QueryApi {
     must(mustQueries).should(shouldQueries).not(notQueries)
   }
 
+  // convenience to make an emtpy bool which can be appended to
   def boolQuery(): BoolQueryDefinition = BoolQueryDefinition()
 
   // short cut for a boolean query with musts

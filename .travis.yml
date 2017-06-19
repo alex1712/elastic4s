@@ -1,11 +1,12 @@
 language: scala
 before_script:
+- sudo chmod +x /usr/local/bin/sbt
 - ulimit -u 30000
 scala:
-- 2.11.8
-- 2.12.1
+- 2.11.11
+- 2.12.2
 script:
 - sbt clean test
 jdk:
 - oraclejdk8
-sudo: true
+sudo: required

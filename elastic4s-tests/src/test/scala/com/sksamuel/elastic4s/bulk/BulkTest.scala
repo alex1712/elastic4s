@@ -8,9 +8,7 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class BulkTest extends FlatSpec with Matchers with ElasticDsl with DualElasticSugar with DualClient {
 
-  import com.sksamuel.elastic4s.jackson.ElasticJackson.Implicits._
-
-  override protected def beforeRunTests() = {
+  override protected def beforeRunTests(): Unit = {
     execute {
       createIndex("chemistry").mappings {
         mapping("elements").fields(
@@ -45,6 +43,24 @@ class BulkTest extends FlatSpec with Matchers with ElasticDsl with DualElasticSu
     execute {
       get(1).from("chemistry/molecule").parent("4")
     }.await.found shouldBe true
+  }
+
+  it should "return details of which items succeeded and failed" in {
+    val result = execute {
+      bulk(
+        update(2).in("chemistry/elements").doc("atomicweight" -> 2, "name" -> "helium"),
+        indexInto("chemistry/elements").fields("atomicweight" -> 8, "name" -> "oxygen") id 8,
+        update(6).in("chemistry/elements").doc("atomicweight" -> 4, "name" -> "lithium"),
+        delete(10).from("chemistry/elements")
+      ).refresh(RefreshPolicy.IMMEDIATE)
+    }.await
+
+    result.hasFailures shouldBe true
+    result.hasSuccesses shouldBe true
+    result.errors shouldBe true
+
+    result.failures.map(_.itemId).toSet shouldBe Set(2, 3)
+    result.successes.map(_.itemId).toSet shouldBe Set(0, 1)
   }
 
   it should "handle multiple update operations" in {

@@ -5,7 +5,9 @@ import com.sksamuel.elastic4s.Executable
 import com.sksamuel.elastic4s.script.{ScriptFieldDefinition, SortBuilderFn}
 import com.sksamuel.elastic4s.searches._
 import com.sksamuel.elastic4s.searches.aggs.AggregationBuilderFn
+import com.sksamuel.elastic4s.searches.collapse.CollapseBuilderFn
 import com.sksamuel.elastic4s.searches.highlighting.HighlightBuilderFn
+import com.sksamuel.elastic4s.searches.suggestions.SuggestionBuilderFn
 import org.elasticsearch.action.search.{MultiSearchResponse, SearchResponse}
 import org.elasticsearch.client.Client
 import org.elasticsearch.common.unit.TimeValue
@@ -60,6 +62,7 @@ trait SearchImplicits {
       search.terminateAfter.foreach(builder.terminateAfter)
       search.timeout.map(dur => TimeValue.timeValueNanos(dur.toNanos)).foreach(builder.timeout)
       search.indexBoosts.foreach { case (index, boost) => builder.indexBoost(index, boost.toFloat) }
+      search.collapse.foreach(c => builder.collapse(CollapseBuilderFn.apply(c)))
 
       if (search.storedFields.nonEmpty)
         builder.storedFields(search.storedFields.asJava)
@@ -94,7 +97,8 @@ trait SearchImplicits {
 
       if (search.suggs.nonEmpty) {
         val suggest = new SuggestBuilder()
-        search.suggs.foreach { sugg => suggest.addSuggestion(sugg.name, sugg.builder) }
+        search.globalSuggestionText.foreach(suggest.setGlobalText)
+        search.suggs.foreach { sugg => suggest.addSuggestion(sugg.name, SuggestionBuilderFn(sugg)) }
         builder.suggest(suggest)
       }
 

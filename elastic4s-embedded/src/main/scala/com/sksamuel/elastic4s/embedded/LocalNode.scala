@@ -8,12 +8,11 @@ import com.sksamuel.exts.Logging
 import org.elasticsearch.client.Client
 import org.elasticsearch.common.settings.Settings
 import org.elasticsearch.index.reindex.ReindexPlugin
-import org.elasticsearch.node.InternalSettingsPreparer
-import org.elasticsearch.node.Node
+import org.elasticsearch.node.{InternalSettingsPreparer, Node}
 import org.elasticsearch.percolator.PercolatorPlugin
 import org.elasticsearch.plugins.Plugin
 import org.elasticsearch.script.mustache.MustachePlugin
-import org.elasticsearch.transport.Netty3Plugin
+import org.elasticsearch.transport.Netty4Plugin
 
 import scala.collection.JavaConverters._
 import scala.util.Try
@@ -38,6 +37,7 @@ class LocalNode(settings: Settings, plugins: List[Class[_ <: Plugin]])
   // the ip and port might not be available via http if http is disabled, in this case we'll set them to 0
   val ipAndPort: String = Option(nodeinfo.getHttp).map(_.address.publishAddress.toString).getOrElse("localhost:-1")
   logger.info(s"LocalNode started @ $ipAndPort")
+  logger.info(s"LocalNode data location ${settings.get("path.data")}")
 
   val ip: String = ipAndPort.takeWhile(_ != ':')
   val port: Int = ipAndPort.dropWhile(_ != ':').drop(1).toInt
@@ -106,11 +106,12 @@ object LocalNode {
     require(settings.getAsMap.containsKey("path.data"))
     require(settings.getAsMap.containsKey("path.repo"))
 
-    val plugins = List(classOf[Netty3Plugin], classOf[MustachePlugin], classOf[PercolatorPlugin], classOf[ReindexPlugin])
+    val plugins = List(classOf[Netty4Plugin], classOf[MustachePlugin], classOf[PercolatorPlugin], classOf[ReindexPlugin])
 
     val mergedSettings = Settings.builder().put(settings)
       .put("transport.type", "local")
-      .put("http.type", "netty3")
+      .put("http.type", "netty4")
+      .put("http.enabled", "true")
       .build()
 
     new LocalNode(mergedSettings, plugins)

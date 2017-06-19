@@ -18,7 +18,6 @@ lazy val root = Project("elastic4s", file("."))
     tcp,
     http,
     embedded,
-    tests,
     testkit,
     circe,
     jackson,
@@ -26,6 +25,7 @@ lazy val root = Project("elastic4s", file("."))
     playjson,
     sprayjson,
     streams,
+    httpstreams,
     xpacksecurity
   )
 
@@ -42,7 +42,7 @@ lazy val core = Project("elastic4s-core", file("elastic4s-core"))
 lazy val tcp = Project("elastic4s-tcp", file("elastic4s-tcp"))
   .settings(name := "elastic4s-tcp")
     .settings(libraryDependencies ++= Seq(
-      "io.netty"                              % "netty-all"                 % "4.1.7.Final",
+      "io.netty"                              % "netty-all"                 % "4.1.10.Final",
       "org.apache.lucene"                     % "lucene-core"               % LuceneVersion,
       "org.apache.lucene"                     % "lucene-analyzers-common"   % LuceneVersion,
       "org.apache.lucene"                     % "lucene-backward-codecs"    % LuceneVersion,
@@ -62,13 +62,29 @@ lazy val tcp = Project("elastic4s-tcp", file("elastic4s-tcp"))
       "org.apache.lucene"                     % "lucene-join"               % LuceneVersion,
       "org.apache.logging.log4j"              % "log4j-api"                 % Log4jVersion,
       "org.apache.logging.log4j"              % "log4j-core"                % Log4jVersion,
-      "org.apache.logging.log4j"              % "log4j-1.2-api"             % Log4jVersion
+      "org.apache.logging.log4j"              % "log4j-1.2-api"             % Log4jVersion,
+      "com.carrotsearch"                      % "hppc"                      % "0.7.1",
+      "joda-time"                             % "joda-time"                 % "2.9.9",
+      "com.fasterxml.jackson.core"            % "jackson-core"              % JacksonVersion,
+      "com.tdunning"                          % "t-digest"                  % "3.1"
     ))
   .dependsOn(core)
 
 lazy val http = Project("elastic4s-http", file("elastic4s-http"))
-  .settings(name := "elastic4s-http")
-    .settings(libraryDependencies += "org.elasticsearch.client" % "rest" % ElasticsearchVersion)
+  .settings(
+    name := "elastic4s-http",
+    libraryDependencies ++= Seq(
+      "org.elasticsearch.client"      % "rest"                    % ElasticsearchVersion,
+      "org.apache.httpcomponents"     % "httpclient"              % "4.5.3",
+      "org.apache.httpcomponents"     % "httpcore-nio"            % "4.4.5",
+      "org.apache.httpcomponents"     % "httpcore"                % "4.4.5",
+      "org.apache.httpcomponents"     % "httpasyncclient"         % "4.1.2",
+      "org.apache.logging.log4j"      % "log4j-api"               % Log4jVersion  % "test",
+      "com.fasterxml.jackson.core"    % "jackson-core"            % JacksonVersion,
+      "com.fasterxml.jackson.core"    % "jackson-databind"        % JacksonVersion,
+      "com.fasterxml.jackson.module" %% "jackson-module-scala"    % JacksonVersion exclude("org.scala-lang", "scala-library")
+    )
+  )
   .dependsOn(core)
 
 lazy val xpacksecurity = Project("elastic4s-xpack-security", file("elastic4s-xpack-security"))
@@ -94,25 +110,25 @@ lazy val testkit = Project("elastic4s-testkit", file("elastic4s-testkit"))
     name := "elastic4s-testkit",
     scalacOptions ++= Seq("-Xmax-classfile-name", "100"),
     libraryDependencies ++= Seq(
-      "org.scalatest"                         %% "scalatest"                % ScalatestVersion
+      "org.scalatest" %% "scalatest" % ScalatestVersion
     )
   )
   .dependsOn(core, embedded, http)
 
-lazy val tests = Project("elastic4s-tests", file("elastic4s-tests"))
-  .settings(
-    name := "elastic4s-tests",
-    libraryDependencies ++= Seq(
-      "commons-io"                    % "commons-io"              % CommonsIoVersion      % "test",
-      "org.mockito"                   % "mockito-all"             % MockitoVersion        % "test",
-      "com.fasterxml.jackson.core"    % "jackson-core"            % JacksonVersion        % "test",
-      "com.fasterxml.jackson.core"    % "jackson-databind"        % JacksonVersion        % "test",
-      "com.fasterxml.jackson.module"  %% "jackson-module-scala"   % JacksonVersion        % "test" exclude("org.scala-lang", "scala-library"),
-      "org.apache.logging.log4j"      % "log4j-api"               % "2.7"                 % "test",
-      "org.apache.logging.log4j"      % "log4j-slf4j-impl"        % "2.7"                 % "test"
-    )
-  )
-  .dependsOn(tcp, http, jackson, testkit % "test")
+//lazy val tests = Project("elastic4s-tests", file("elastic4s-tests"))
+//  .settings(
+//    name := "elastic4s-tests",
+//    libraryDependencies ++= Seq(
+//      "commons-io"                    % "commons-io"              % CommonsIoVersion      % "test",
+//      "org.mockito"                   % "mockito-all"             % MockitoVersion        % "test",
+//      "com.fasterxml.jackson.core"    % "jackson-core"            % JacksonVersion        % "test",
+//      "com.fasterxml.jackson.core"    % "jackson-databind"        % JacksonVersion        % "test",
+//      "com.fasterxml.jackson.module"  %% "jackson-module-scala"   % JacksonVersion        % "test" exclude("org.scala-lang", "scala-library"),
+//      "org.apache.logging.log4j"      % "log4j-api"               % "2.7"                 % "test",
+//      "org.apache.logging.log4j"      % "log4j-slf4j-impl"        % "2.7"                 % "test"
+//    )
+//  )
+//  .dependsOn(tcp, http, jackson, testkit % "test")
 
 lazy val streams = Project("elastic4s-streams", file("elastic4s-streams"))
   .settings(
@@ -121,6 +137,14 @@ lazy val streams = Project("elastic4s-streams", file("elastic4s-streams"))
     libraryDependencies += "org.reactivestreams"      % "reactive-streams"      % ReactiveStreamsVersion,
     libraryDependencies += "org.reactivestreams"      % "reactive-streams-tck"  % ReactiveStreamsVersion % "test"
   ).dependsOn(tcp, testkit % "test", jackson % "test")
+
+lazy val httpstreams = Project("elastic4s-http-streams", file("elastic4s-http-streams"))
+  .settings(
+    name := "elastic4s-http-streams",
+    libraryDependencies += "com.typesafe.akka"        %% "akka-actor"           % AkkaVersion,
+    libraryDependencies += "org.reactivestreams"      % "reactive-streams"      % ReactiveStreamsVersion,
+    libraryDependencies += "org.reactivestreams"      % "reactive-streams-tck"  % ReactiveStreamsVersion % "test"
+  ).dependsOn(http, testkit % "test", jackson % "test")
 
 lazy val jackson = Project("elastic4s-jackson", file("elastic4s-jackson"))
   .settings(

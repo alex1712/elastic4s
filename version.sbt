@@ -1,1 +1,1 @@
-version in ThisBuild := "5.3.3-MNQ-SNAPSHOT"
+version in ThisBuild := "5.4.5-MNQ-SNAPSHOT"

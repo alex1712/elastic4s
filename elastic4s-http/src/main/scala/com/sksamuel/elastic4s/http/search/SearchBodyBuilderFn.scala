@@ -1,8 +1,7 @@
 package com.sksamuel.elastic4s.http.search
 
-import java.util
-
 import com.sksamuel.elastic4s.http.search.aggs.AggregationBuilderFn
+import com.sksamuel.elastic4s.http.search.collapse.CollapseBuilderFn
 import com.sksamuel.elastic4s.http.search.queries.{QueryBuilderFn, SortContentBuilder}
 import com.sksamuel.elastic4s.searches.SearchDefinition
 import com.sksamuel.elastic4s.searches.suggestion.TermSuggestionDefinition
@@ -20,6 +19,10 @@ object SearchBodyBuilderFn {
 
     request.query.map(QueryBuilderFn.apply).foreach(x => builder.rawField("query", new BytesArray(x.string), XContentType.JSON))
     request.postFilter.map(QueryBuilderFn.apply).foreach(x => builder.rawField("post_filter", new BytesArray(x.string), XContentType.JSON))
+    request.collapse.map(CollapseBuilderFn.apply).foreach(x => builder.rawField("collapse", new BytesArray(x.string), XContentType.JSON))
+
+    request.from.foreach(builder.field("from", _))
+    request.size.foreach(builder.field("size", _))
 
     if (request.explain.contains(true)) {
       builder.field("explain", true)
@@ -31,49 +34,17 @@ object SearchBodyBuilderFn {
     }
 
     if (request.sorts.nonEmpty) {
-      builder.startArray("sort")
-      request.sorts.foreach { sort =>
-        builder.rawValue(new BytesArray(SortContentBuilder(sort).string), XContentType.JSON)
-      }
-      builder.endArray()
+			builder.startArray("sort")
+			// Workaround for bug where separator is not added with rawValues
+			val arrayBody = new BytesArray(request.sorts.map(s => SortContentBuilder(s).string).mkString(","))
+			builder.rawValue(arrayBody, XContentType.JSON)
+			builder.endArray()
     }
 
-    if (request.highlight.nonEmpty) {
-      builder.startObject("highlight")
-      request.highlight.foreach { highlight =>
-        builder.startObject("fields")
-        highlight.fields.foreach { field =>
-          builder.startObject(field.field)
-          field.boundaryChars.foreach(builder.field("boundary_chars", _))
-          field.boundaryMaxScan.foreach(builder.field("boundary_max_scan", _))
-          field.forceSource.foreach(builder.field("force_source", _))
-          field.fragmentOffset.foreach(builder.field("fragment_offset", _))
-          field.fragmentSize.foreach(builder.field("fragment_size", _))
-          field.highlightQuery.map(QueryBuilderFn.apply).map(_.bytes()).foreach { highlight =>
-            builder.rawField("highlight_query", highlight, XContentType.JSON)
-          }
-          field.matchedFields.foreach(builder.field("matched_fields", _))
-          field.noMatchSize.foreach(builder.field("no_match_size", _))
-          field.numOfFragments.foreach(builder.field("number_of_fragments", _))
-          field.order.foreach(builder.field("order", _))
-          field.phraseLimit.foreach(builder.field("phrase_limit", _))
-          if (field.postTags.nonEmpty || field.preTags.nonEmpty) {
-            if (field.postTags.isEmpty)
-              builder.field("post_tags", util.Arrays.asList("</em>"))
-            else
-              builder.field("post_tags", field.postTags.asJava)
+    request.trackScores.map(builder.field("track_scores", _))
 
-            if (field.preTags.isEmpty)
-              builder.field("pre_tags", util.Arrays.asList("<em>"))
-            else
-              builder.field("pre_tags", field.preTags.asJava)
-          }
-          field.requireFieldMatch.foreach(builder.field("require_field_match", _))
-          builder.endObject()
-        }
-        builder.endObject()
-      }
-      builder.endObject()
+    request.highlight.foreach { highlight =>
+      builder.rawField("highlight", HighlightFieldBuilderFn(highlight.fields).bytes(), XContentType.JSON)
     }
 
     if (request.suggs.nonEmpty) {

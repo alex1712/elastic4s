@@ -2,8 +2,7 @@ package com.sksamuel.elastic4s.searches.suggestion
 
 import com.sksamuel.exts.OptionImplicits._
 import org.elasticsearch.common.unit.Fuzziness
-import org.elasticsearch.search.suggest.SuggestBuilders
-import org.elasticsearch.search.suggest.completion.{CompletionSuggestionBuilder, FuzzyOptions, RegexOptions}
+import org.elasticsearch.search.suggest.completion.RegexOptions
 
 case class CompletionSuggestionDefinition(name: String,
                                           fieldname: String,
@@ -19,33 +18,8 @@ case class CompletionSuggestionDefinition(name: String,
                                           size: Option[Int] = None,
                                           transpositions: Option[Boolean] = None,
                                           unicodeAware: Option[Boolean] = None,
-                                          text: Option[String] = None) extends SuggestionDefinition {
-
-  override type B = CompletionSuggestionBuilder
-
-  override def builder: CompletionSuggestionBuilder = {
-    val builder = SuggestBuilders.completionSuggestion(fieldname)
-    super.populate(builder)
-
-    prefix.foreach { prefix =>
-      fuzziness.fold(builder.prefix(prefix)) { fuzz =>
-        val options = new FuzzyOptions.Builder()
-        options.setFuzziness(fuzz)
-        unicodeAware.foreach(options.setUnicodeAware)
-        fuzzyMinLength.foreach(options.setFuzzyMinLength)
-        fuzzyPrefixLength.foreach(options.setFuzzyPrefixLength)
-        maxDeterminizedStates.foreach(options.setMaxDeterminizedStates)
-        transpositions.foreach(options.setTranspositions)
-        builder.prefix(prefix, options.build)
-      }
-    }
-
-    regex.foreach { regex =>
-      builder.regex(regex, regexOptions.orNull)
-    }
-
-    builder
-  }
+                                          text: Option[String] = None,
+                                          contexts: Map[String, Seq[CategoryContext]] = Map.empty) extends SuggestionDefinition {
 
   def regex(regex: String): CompletionSuggestionDefinition = copy(regex = regex.some)
   def regexOptions(regexOptions: RegexOptions): CompletionSuggestionDefinition = copy(regexOptions = regexOptions.some)
@@ -55,6 +29,14 @@ case class CompletionSuggestionDefinition(name: String,
   def fuzziness(fuzziness: Fuzziness): CompletionSuggestionDefinition = copy(fuzziness = fuzziness.some)
   def transpositions(transpositions: Boolean): CompletionSuggestionDefinition = copy(transpositions = transpositions.some)
   def unicodeAware(unicodeAware: Boolean): CompletionSuggestionDefinition = copy(unicodeAware = unicodeAware.some)
+
+  def context(name: String, context: CategoryContext): CompletionSuggestionDefinition = contexts(name, Seq(context))
+  def contexts(name: String, contexts: Seq[CategoryContext]): CompletionSuggestionDefinition = {
+    copy(contexts = this.contexts + (name -> contexts))
+  }
+
+  // adds more contexts to this query
+  def contexts(map: Map[String, Seq[CategoryContext]]): CompletionSuggestionDefinition = copy(contexts = this.contexts ++ map)
 
   def prefix(prefix: String): CompletionSuggestionDefinition = copy(prefix = prefix.some)
   def prefix(prefix: String, fuzziness: Fuzziness): CompletionSuggestionDefinition =
@@ -66,3 +48,5 @@ case class CompletionSuggestionDefinition(name: String,
   override def shardSize(shardSize: Int): CompletionSuggestionDefinition = copy(shardSize = shardSize.some)
   override def size(size: Int): CompletionSuggestionDefinition = copy(size = size.some)
 }
+
+case class CategoryContext(name: String, boost: Double = 0, prefix: Boolean = false)

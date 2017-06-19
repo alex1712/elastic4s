@@ -1,14 +1,12 @@
 package com.sksamuel.elastic4s.indexes
 
 import com.sksamuel.elastic4s.ElasticsearchClientUri
-import com.sksamuel.elastic4s.http.index.IndexShardStoreResponse.{ShardStoreStatus, IndexStoreStatus}
+import com.sksamuel.elastic4s.http.index.admin.IndexShardStoreResponse.{ShardStoreStatus, IndexStoreStatus}
 import com.sksamuel.elastic4s.http.{HttpClient, ElasticDsl}
 import com.sksamuel.elastic4s.testkit.SharedElasticSugar
 import org.scalatest.{Matchers, WordSpec}
 
 class ShardStoreHttpTest extends WordSpec with Matchers with SharedElasticSugar with ElasticDsl {
-
-  import com.sksamuel.elastic4s.jackson.ElasticJackson.Implicits._
 
   val http = HttpClient(ElasticsearchClientUri("elasticsearch://" + node.ipAndPort))
 

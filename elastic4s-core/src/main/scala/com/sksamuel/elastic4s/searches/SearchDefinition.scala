@@ -3,6 +3,7 @@ package com.sksamuel.elastic4s.searches
 import com.sksamuel.elastic4s.IndexesAndTypes
 import com.sksamuel.elastic4s.script.ScriptFieldDefinition
 import com.sksamuel.elastic4s.searches.aggs.AbstractAggregation
+import com.sksamuel.elastic4s.searches.collapse.CollapseDefinition
 import com.sksamuel.elastic4s.searches.queries._
 import com.sksamuel.elastic4s.searches.queries.matches.{MatchAllQueryDefinition, MatchQueryDefinition}
 import com.sksamuel.elastic4s.searches.queries.term.TermQueryDefinition
@@ -18,6 +19,7 @@ import scala.concurrent.duration.{Duration, FiniteDuration}
 
 case class SearchDefinition(indexesTypes: IndexesAndTypes,
                             aggs: Seq[AbstractAggregation] = Nil,
+                            collapse: Option[CollapseDefinition] = None,
                             explain: Option[Boolean] = None,
                             fetchContext: Option[FetchSourceContext] = None,
                             from: Option[Int] = None,
@@ -36,6 +38,7 @@ case class SearchDefinition(indexesTypes: IndexesAndTypes,
                             sorts: Seq[SortDefinition] = Nil,
                             storedFields: Seq[String] = Nil,
                             suggs: Seq[SuggestionDefinition] = Nil,
+                            globalSuggestionText: Option[String] = None,
                             size: Option[Int] = None,
                             routing: Option[String] = None,
                             stats: Seq[String] = Nil,
@@ -117,9 +120,9 @@ case class SearchDefinition(indexesTypes: IndexesAndTypes,
                   rest: SuggestionDefinition*): SearchDefinition = suggestions(first +: rest)
 
   def suggestions(suggs: Iterable[SuggestionDefinition]): SearchDefinition = copy(suggs = suggs.toSeq)
-
   def suggestion(sugg: SuggestionDefinition): SearchDefinition = suggestions(Seq(sugg))
 
+  def globalSuggestionText(text: String): SearchDefinition = copy(globalSuggestionText = text.some)
 
   // Adds a single prefix query to this search
   def prefix(name: String, value: Any): SearchDefinition = query(PrefixQueryDefinition(name, value))
@@ -272,4 +275,6 @@ case class SearchDefinition(indexesTypes: IndexesAndTypes,
 
   def sourceFiltering(includes: Iterable[String], excludes: Iterable[String]): SearchDefinition =
     copy(fetchContext = new FetchSourceContext(true, includes.toArray, excludes.toArray).some)
+
+  def collapse(collapse: CollapseDefinition): SearchDefinition = copy(collapse = collapse.some)
 }
