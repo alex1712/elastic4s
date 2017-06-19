@@ -60,7 +60,7 @@ object Build extends AutoPlugin {
     ),
     credentials += Credentials(Path.userHome / ".nexus" / ".credentials"),
     publishTo := {
-      val nexus = "http://nexus.monoqi.com:8081/"
+      val nexus = "https://nexus.monoqi.com/"
       if (isSnapshot.value) {
         if(sbtPlugin.value) Some("plugin-snapshots" at s"${nexus}repository/sbt-plugins-snapshots")
         else Some("snapshots" at s"${nexus}repository/maven-snapshots")

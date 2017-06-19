@@ -1,6 +1,8 @@
 package com.sksamuel.elastic4s
 
-import com.sksamuel.elastic4s.http.index.{CreateIndexResponse, DeleteIndexResponse, IndexExistsResponse, PutMappingResponse}
+import com.sksamuel.elastic4s.http.index.admin.{DeleteIndexResponse, IndexExistsResponse}
+import com.sksamuel.elastic4s.http.index.CreateIndexResponse
+import com.sksamuel.elastic4s.http.index.mappings.PutMappingResponse
 import play.api.libs.json._
 
 import scala.annotation.implicitNotFound
